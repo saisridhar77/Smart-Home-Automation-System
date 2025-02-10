@@ -1,4 +1,4 @@
-# Smart Home Automation System
+# Smart Home Automation System (in progress)
 
 ## Project Overview
 This project is a **Smart Home Automation System** that allows users to remotely control and monitor home devices such as lights, fans, air conditioning, and security systems. The system provides functionalities like turning devices ON/OFF, adjusting settings (e.g., brightness, temperature), scheduling automation, real-time monitoring, and energy consumption tracking.
