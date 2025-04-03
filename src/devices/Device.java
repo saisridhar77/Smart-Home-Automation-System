@@ -2,7 +2,7 @@ package devices;
 
 import enums.DeviceStatus;
 
-public abstract class Device {
+public class Device {
     private String id;
     private String name;
     private DeviceStatus status;
@@ -19,10 +19,18 @@ public abstract class Device {
         this(id, "Unnamed Device");
     }
 
-    // Abstract methods
-    public abstract void turnOn();
-    public abstract void turnOff();
-    public abstract void adjustSetting(double value);
+    public  void turnOn(){
+
+    };
+    public  void turnOff(){
+
+    };
+    public  void adjustSetting(double value){
+
+    };
+    public  void adjustSetting(DeviceStatus value){
+
+    };
 
     // Getters and Setters
     public String getId() { return id; }

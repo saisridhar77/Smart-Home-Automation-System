@@ -11,7 +11,7 @@ public class AirConditioner extends Device {
     @Override
     public void turnOn() {
         setStatus(DeviceStatus.ON);
-        temperature = 23; // Default speed
+        temperature = 23; 
     }
 
     @Override

@@ -25,4 +25,5 @@ public abstract class User {
     // Getters
     public String getUsername() { return username; }
     public UserRole getRole() { return role; }
+    public boolean checkPassword(String password) { return this.password.equals(password); }
 }

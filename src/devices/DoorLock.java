@@ -3,8 +3,8 @@ package devices;
 import enums.DeviceStatus;
 public class DoorLock extends Device {
     @Override
-    public void adjustSetting(double setting) {
-        if (setting == 1) {
+    public void adjustSetting(DeviceStatus status) {
+        if (status == DeviceStatus.ON) {
             turnOn();
         } else {
             turnOff();
