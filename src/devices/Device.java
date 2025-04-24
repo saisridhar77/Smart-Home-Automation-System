@@ -36,5 +36,5 @@ public class Device {
     public String getId() { return id; }
     public String getName() { return name; }
     public DeviceStatus getStatus() { return status; }
-    protected void setStatus(DeviceStatus status) { this.status = status; }
+    public void setStatus(DeviceStatus status) { this.status = status; }
 }

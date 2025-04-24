@@ -1,18 +1,26 @@
 package gui;
+
 import enums.UserRole;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import javax.swing.*;
+import devices.Device;
 import users.Admin;
 import users.RegularUser;
 import users.User;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.util.List;
+
 public class LoginUI extends JFrame {
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JButton loginButton;
     private User loggedInUser;
+    private List<Device> devices; // Shared list of devices
 
-    public LoginUI() {
+    public LoginUI(List<Device> devices) {
+        this.devices = devices; // Store the shared devices list
+
         setTitle("Login");
         setSize(400, 250);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -61,7 +69,7 @@ public class LoginUI extends JFrame {
         loginButton.addActionListener((ActionEvent e) -> {
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
-            
+
             if ("admin".equals(username) && "admin123".equals(password)) {
                 loggedInUser = new Admin(username, password);
             } else if ("user".equals(username) && "user123".equals(password)) {
@@ -77,9 +85,12 @@ public class LoginUI extends JFrame {
 
     private void launchDashboard() {
         if (loggedInUser.getRole() == UserRole.ADMIN) {
-            new AdminDashboard().setVisible(true);
+            AdminDashboard adminDashboard = new AdminDashboard(devices); // Create AdminDashboard
+            adminDashboard.setVisible(true);
         } else {
-            new UserDashboard().setVisible(true);
+            AdminDashboard adminDashboard = new AdminDashboard(devices); // Create AdminDashboard
+            UserDashboard userDashboard = new UserDashboard(devices, adminDashboard); // Pass AdminDashboard to UserDashboard
+            userDashboard.setVisible(true);
         }
     }
 }
