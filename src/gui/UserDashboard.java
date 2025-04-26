@@ -4,6 +4,8 @@ import devices.*;
 import enums.DeviceStatus;
 import enums.UserEditable;
 import users.User;
+import exceptions.DeviceNotFoundException;
+import exceptions.UnauthorizedAccessException;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -58,7 +60,6 @@ public class UserDashboard extends JFrame {
         DefaultTableModel tableModel = new DefaultTableModel(deviceData, columnNames) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                // Only allow editing Status (3) or Parameter (4) if userEditable == "Yes"
                 String userEditableFlag = (String) getValueAt(row, 5);
                 if (!"Yes".equals(userEditableFlag)) {
                     return false;
@@ -69,22 +70,27 @@ public class UserDashboard extends JFrame {
 
         deviceTable = new JTable(tableModel);
 
-        // Set combo box editor for Status column
         TableColumn statusColumn = deviceTable.getColumnModel().getColumn(3);
         JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"ON", "OFF"});
         statusColumn.setCellEditor(new DefaultCellEditor(statusComboBox));
 
-        // Add listener to handle model updates
         tableModel.addTableModelListener(e -> {
             int row = e.getFirstRow();
             int column = e.getColumn();
 
             if (row >= 0 && column >= 0) {
-                updateDeviceFromTable(row, column, tableModel);
+                try {
+                    updateDeviceFromTable(row, column, tableModel);
+                } catch (UnauthorizedAccessException | DeviceNotFoundException ex) {
+                    JOptionPane.showMessageDialog(this, ex.getMessage(), "Access Error", JOptionPane.ERROR_MESSAGE);
+                    loadDevices(); // Reload to undo invalid changes
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Invalid input format!", "Input Error", JOptionPane.ERROR_MESSAGE);
+                    loadDevices();
+                }
             }
         });
 
-        // Remove old scrollpane if any
         if (scrollPane != null) {
             remove(scrollPane);
         }
@@ -101,10 +107,10 @@ public class UserDashboard extends JFrame {
 
         for (Device device : loggedInUser.getDevices()) {
             Object[] row = new Object[6];
-            row[0] = loggedInUser.getUsername(); // Owner
-            row[1] = device.getName();           // Device Name
-            row[2] = device.getClass().getSimpleName(); // Device Type
-            row[3] = device.getStatus().toString();     // Status
+            row[0] = loggedInUser.getUsername();
+            row[1] = device.getName();
+            row[2] = device.getClass().getSimpleName();
+            row[3] = device.getStatus().toString();
 
             if (device instanceof AirConditioner) {
                 row[4] = ((AirConditioner) device).getTemperature();
@@ -128,32 +134,33 @@ public class UserDashboard extends JFrame {
         return data;
     }
 
-    private void updateDeviceFromTable(int row, int column, DefaultTableModel tableModel) {
+    private void updateDeviceFromTable(int row, int column, DefaultTableModel tableModel)
+            throws UnauthorizedAccessException, DeviceNotFoundException, NumberFormatException {
+
+        String userEditableFlag = (String) tableModel.getValueAt(row, 5);
+        if (!"Yes".equals(userEditableFlag)) {
+            throw new UnauthorizedAccessException("Editing not allowed for this device!");
+        }
+
         String deviceName = (String) tableModel.getValueAt(row, 1);
         Device device = loggedInUser.getDevices().stream()
                 .filter(d -> d.getName().equals(deviceName))
                 .findFirst()
-                .orElse(null);
+                .orElseThrow(() -> new DeviceNotFoundException("Device not found: " + deviceName));
 
-        if (device == null) return;
+        if (column == 3) { // Status
+            String newStatus = (String) tableModel.getValueAt(row, column);
+            device.setStatus(DeviceStatus.valueOf(newStatus));
+        } else if (column == 4) { // Parameter
+            int newParam = Integer.parseInt(tableModel.getValueAt(row, column).toString());
 
-        try {
-            if (column == 3) { // Status
-                String newStatus = (String) tableModel.getValueAt(row, column);
-                device.setStatus(DeviceStatus.valueOf(newStatus));
-            } else if (column == 4) { // Parameter
-                int newParam = Integer.parseInt(tableModel.getValueAt(row, column).toString());
-
-                if (device instanceof AirConditioner) {
-                    ((AirConditioner) device).adjustSetting(newParam);
-                } else if (device instanceof Fan) {
-                    ((Fan) device).adjustSetting(Math.max(1, Math.min(5, newParam)));
-                } else if (device instanceof Light) {
-                    ((Light) device).adjustSetting(Math.max(0, Math.min(100, newParam)));
-                }
+            if (device instanceof AirConditioner) {
+                ((AirConditioner) device).adjustSetting(newParam);
+            } else if (device instanceof Fan) {
+                ((Fan) device).adjustSetting(Math.max(1, Math.min(5, newParam)));
+            } else if (device instanceof Light) {
+                ((Light) device).adjustSetting(Math.max(0, Math.min(100, newParam)));
             }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Invalid input!", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 }
