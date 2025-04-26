@@ -89,7 +89,11 @@ public class UserDashboard extends JFrame {
             data[i][2] = device.getStatus().toString();
             if (device instanceof AirConditioner) {
                 data[i][3] = ((AirConditioner) device).getTemperature();
-            } else {
+            }else if(device instanceof Fan){
+                data[i][3] = ((Fan) device).getSpeed();
+            }else if(device instanceof Light){
+                data[i][3] = ((Light) device).getBrightness();
+            }else {
                 data[i][3] = "N/A"; // For devices without temperature
             }
         }
