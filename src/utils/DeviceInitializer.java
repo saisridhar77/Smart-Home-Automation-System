@@ -10,6 +10,9 @@ public class DeviceInitializer {
         AirConditioner ac = new AirConditioner("1", "Living Room AC");
         ac.turnOn(); // Set initial status and temperature
         devices.add(ac);
+        Fan fan = new Fan("2", "Living Room Fan");
+        fan.turnOn();
+        devices.add(fan);
 
         // Add other devices here (e.g., Light, Fan, etc.)
         return devices;
