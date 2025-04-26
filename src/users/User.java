@@ -31,6 +31,7 @@ public abstract class User {
     // Getters
     public String getUsername() { return username; }
     public UserRole getRole() { return role; }
+    public String getPassword() {return password;}
     public boolean checkPassword(String password) { return this.password.equals(password); }
 
     public void addDevices(Device... devices) {
