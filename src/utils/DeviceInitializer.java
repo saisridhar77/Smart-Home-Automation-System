@@ -13,6 +13,9 @@ public class DeviceInitializer {
         Fan fan = new Fan("2", "Living Room Fan");
         fan.turnOn();
         devices.add(fan);
+        Light lite = new Light("3", "Living Room Light");
+        lite.turnOn();
+        devices.add(lite);
 
         // Add other devices here (e.g., Light, Fan, etc.)
         return devices;
