@@ -62,7 +62,7 @@ public class AdminDashboard extends JFrame {
         DefaultTableModel tableModel = new DefaultTableModel(deviceData, columnNames) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 2 || column == 3;
+                return column == 3 || column == 4;
             }
         };
 
@@ -76,10 +76,10 @@ public class AdminDashboard extends JFrame {
             int row = e.getFirstRow();
             int column = e.getColumn();
 
-            if (column == 2) {
+            if (column == 3) {
                 String newStatus = (String) tableModel.getValueAt(row, column);
                 adminUser.getDevices().get(row).setStatus(DeviceStatus.valueOf(newStatus));
-            } else if (column == 3) {
+            } else if (column == 4) {
                 try {
                     int newTemperature = Integer.parseInt(tableModel.getValueAt(row, column).toString());
                     if (adminUser.getDevices().get(row) instanceof AirConditioner) {
@@ -122,29 +122,6 @@ public class AdminDashboard extends JFrame {
             }
         }
     }
-
-    // private List<Device> selectDevicesPopup() {
-    //     String[] availableDevices = {"Light", "Fan", "AirConditioner", "MotionSensor", "Thermostat", "DoorLock"};
-    //     JCheckBox[] checkBoxes = new JCheckBox[availableDevices.length];
-
-    //     JPanel panel = new JPanel(new GridLayout(0, 1));
-    //     for (int i = 0; i < availableDevices.length; i++) {
-    //         checkBoxes[i] = new JCheckBox(availableDevices[i]);
-    //         panel.add(checkBoxes[i]);
-    //     }
-
-    //     int result = JOptionPane.showConfirmDialog(this, panel, "Select Devices to Assign", JOptionPane.OK_CANCEL_OPTION);
-    //     List<Device> selectedDevices = new ArrayList<>();
-
-    //     if (result == JOptionPane.OK_OPTION) {
-    //         for (int i = 0; i < checkBoxes.length; i++) {
-    //             if (checkBoxes[i].isSelected()) {
-    //                 selectedDevices.add(new Device(availableDevices[i]));
-    //             }
-    //         }
-    //     }
-    //     return selectedDevices;
-    // }
 
     private List<Device> selectDevicesPopup() {
         List<Device> selectedDevices = new ArrayList<>();
