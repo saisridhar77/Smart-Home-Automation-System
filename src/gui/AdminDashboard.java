@@ -21,7 +21,7 @@ public class AdminDashboard extends JFrame {
     public List<User> allUsers;
     private boolean isEditingEnabled = false;
     private final PropertyChangeSupport support = new PropertyChangeSupport(this);
-    private JScrollPane tableScrollPane; // Declare a class-level variable for the scroll pane
+    private JScrollPane tableScrollPane;
 
     public AdminDashboard(Admin adminUser, List<User> allUsers) {
         this.adminUser = adminUser;
@@ -47,13 +47,31 @@ public class AdminDashboard extends JFrame {
         });
 
         JButton assignDevicesButton = new JButton("Assign Devices");
-        assignDevicesButton.addActionListener(e -> assignDevicesToUser());
+        assignDevicesButton.addActionListener(e -> {
+            try {
+                assignDevicesToUser();
+            } catch (Exception ex) {
+                showError("Error assigning devices: " + ex.getMessage());
+            }
+        });
 
         JButton refreshButton = new JButton("Refresh");
-        refreshButton.addActionListener(e -> loadDevices()); // Correctly attach loadDevices() to the Refresh button
+        refreshButton.addActionListener(e -> {
+            try {
+                loadDevices();
+            } catch (Exception ex) {
+                showError("Error refreshing devices: " + ex.getMessage());
+            }
+        });
 
         JButton createUserButton = new JButton("Create New User");
-        createUserButton.addActionListener(e -> createNewUser()); // Attach createNewUser() to the Create New User button
+        createUserButton.addActionListener(e -> {
+            try {
+                createNewUser();
+            } catch (Exception ex) {
+                showError("Error creating new user: " + ex.getMessage());
+            }
+        });
 
         topPanel.add(logoutButton, BorderLayout.EAST);
         topPanel.add(assignDevicesButton, BorderLayout.CENTER);
@@ -62,115 +80,122 @@ public class AdminDashboard extends JFrame {
 
         add(topPanel, BorderLayout.NORTH);
         loadDevices();
-        
     }
 
     private void assignDevicesToUser() {
-        String[] usernames = allUsers.stream()
-                .filter(u -> !(u instanceof Admin))
-                .map(User::getUsername)
-                .toArray(String[]::new);
+        try {
+            String[] usernames = allUsers.stream()
+                    .filter(u -> !(u instanceof Admin))
+                    .map(User::getUsername)
+                    .toArray(String[]::new);
 
-        String selectedUser = (String) JOptionPane.showInputDialog(this, "Select user:", "Assign Devices",
-                JOptionPane.PLAIN_MESSAGE, null, usernames, usernames[0]);
+            if (usernames.length == 0) {
+                showError("No regular users available!");
+                return;
+            }
 
-        if (selectedUser == null) return;
+            String selectedUser = (String) JOptionPane.showInputDialog(this, "Select user:", "Assign Devices",
+                    JOptionPane.PLAIN_MESSAGE, null, usernames, usernames[0]);
 
-        User user = allUsers.stream()
-                .filter(u -> u.getUsername().equals(selectedUser))
-                .findFirst()
-                .orElse(null);
+            if (selectedUser == null) return;
 
-        if (user != null) {
+            User user = allUsers.stream()
+                    .filter(u -> u.getUsername().equals(selectedUser))
+                    .findFirst()
+                    .orElseThrow(() -> new Exception("Selected user not found."));
+
             List<Device> selectedDevices = selectDevicesPopup();
             if (!selectedDevices.isEmpty()) {
                 user.addDevices(selectedDevices.toArray(new Device[0]));
                 JOptionPane.showMessageDialog(this, "Devices assigned successfully!");
             }
+        } catch (Exception e) {
+            showError("Failed to assign devices: " + e.getMessage());
         }
     }
 
     private List<Device> selectDevicesPopup() {
         List<Device> selectedDevices = new ArrayList<>();
+        try {
+            String[] availableDevices = {"Light", "Fan", "AirConditioner", "MotionSensor", "DoorLock"};
 
-        String[] availableDevices = {"Light", "Fan", "AirConditioner", "MotionSensor", "DoorLock"};
+            JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
+            JComboBox<String> deviceTypeCombo = new JComboBox<>(availableDevices);
+            JTextField deviceIdField = new JTextField(15);
+            JTextField deviceNameField = new JTextField(15);
 
-        JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
+            panel.add(new JLabel("Select Device Type:"));
+            panel.add(deviceTypeCombo);
+            panel.add(new JLabel("Enter Device ID:"));
+            panel.add(deviceIdField);
+            panel.add(new JLabel("Enter Device Name:"));
+            panel.add(deviceNameField);
 
-        JComboBox<String> deviceTypeCombo = new JComboBox<>(availableDevices);
-        JTextField deviceIdField = new JTextField(15);
-        JTextField deviceNameField = new JTextField(15);
+            int option = JOptionPane.showConfirmDialog(this, panel, "Add Device", JOptionPane.OK_CANCEL_OPTION);
 
-        panel.add(new JLabel("Select Device Type:"));
-        panel.add(deviceTypeCombo);
-        panel.add(new JLabel("Enter Device ID:"));
-        panel.add(deviceIdField);
-        panel.add(new JLabel("Enter Device Name:"));
-        panel.add(deviceNameField);
+            if (option == JOptionPane.OK_OPTION) {
+                String selectedType = (String) deviceTypeCombo.getSelectedItem();
+                String deviceId = deviceIdField.getText().trim();
+                String deviceName = deviceNameField.getText().trim();
 
-        int option = JOptionPane.showConfirmDialog(this, panel, "Add Device", JOptionPane.OK_CANCEL_OPTION);
+                if (deviceId.isEmpty() || deviceName.isEmpty()) {
+                    throw new IllegalArgumentException("Device ID and Name cannot be empty!");
+                }
 
-        if (option == JOptionPane.OK_OPTION) {
-            String selectedType = (String) deviceTypeCombo.getSelectedItem();
-            String deviceId = deviceIdField.getText().trim();
-            String deviceName = deviceNameField.getText().trim();
+                Device newDevice;
+                switch (selectedType) {
+                    case "Light":
+                        newDevice = new Light(deviceId, deviceName);
+                        break;
+                    case "Fan":
+                        newDevice = new Fan(deviceId, deviceName);
+                        break;
+                    case "AirConditioner":
+                        newDevice = new AirConditioner(deviceId, deviceName);
+                        break;
+                    case "MotionSensor":
+                        newDevice = new MotionSensor(deviceId, deviceName);
+                        break;
+                    case "DoorLock":
+                        newDevice = new DoorLock(deviceId, deviceName);
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Unknown device type!");
+                }
 
-            if (deviceId.isEmpty() || deviceName.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Device ID and Name cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
-                return selectedDevices;
+                selectedDevices.add(newDevice);
             }
-
-            Device newDevice = null;
-            switch (selectedType) {
-                case "Light":
-                    newDevice = new Light(deviceId, deviceName);
-                    break;
-                case "Fan":
-                    newDevice = new Fan(deviceId, deviceName);
-                    break;
-                case "AirConditioner":
-                    newDevice = new AirConditioner(deviceId, deviceName);
-                    break;
-                case "MotionSensor":
-                    newDevice = new MotionSensor(deviceId, deviceName);
-                    break;
-                case "DoorLock":
-                    newDevice = new DoorLock(deviceId, deviceName);
-                    break;
-                default:
-                    JOptionPane.showMessageDialog(this, "Unknown device type!", "Error", JOptionPane.ERROR_MESSAGE);
-                    return selectedDevices;
-            }
-
-            selectedDevices.add(newDevice);
-            
+        } catch (Exception e) {
+            showError("Failed to add device: " + e.getMessage());
         }
 
         return selectedDevices;
     }
 
     private void createNewUser() {
-        JTextField usernameField = new JTextField();
-        JTextField passwordField = new JTextField();
-        Object[] fields = {"Username:", usernameField, "Password:", passwordField};
+        try {
+            JTextField usernameField = new JTextField();
+            JTextField passwordField = new JTextField();
+            Object[] fields = {"Username:", usernameField, "Password:", passwordField};
 
-        int option = JOptionPane.showConfirmDialog(this, fields, "Create New User", JOptionPane.OK_CANCEL_OPTION);
-        if (option == JOptionPane.OK_OPTION) {
-            String username = usernameField.getText().trim();
-            String password = passwordField.getText().trim();
+            int option = JOptionPane.showConfirmDialog(this, fields, "Create New User", JOptionPane.OK_CANCEL_OPTION);
+            if (option == JOptionPane.OK_OPTION) {
+                String username = usernameField.getText().trim();
+                String password = passwordField.getText().trim();
 
-            if (username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Username and password cannot be empty.");
-                return;
+                if (username.isEmpty() || password.isEmpty()) {
+                    throw new IllegalArgumentException("Username and password cannot be empty.");
+                }
+
+                if (allUsers.stream().anyMatch(u -> u.getUsername().equals(username))) {
+                    throw new IllegalArgumentException("Username already exists!");
+                }
+                allUsers.add(new RegularUser(username, password));
+
+                JOptionPane.showMessageDialog(this, "User created successfully!");
             }
-
-            if (allUsers.stream().anyMatch(u -> u.getUsername().equals(username))) {
-                JOptionPane.showMessageDialog(this, "Username already exists!");
-                return;
-            }
-            allUsers.add(new RegularUser(username, password));
-
-            JOptionPane.showMessageDialog(this, "User created successfully!");
+        } catch (Exception e) {
+            showError("Failed to create user: " + e.getMessage());
         }
     }
 
@@ -180,12 +205,11 @@ public class AdminDashboard extends JFrame {
         for (User user : allUsers) {
             for (Device device : user.getDevices()) {
                 Object[] row = new Object[6];
-                row[0] = user.getUsername(); // Owner first
-                row[1] = device.getName();    // Device Name
-                row[2] = device.getClass().getSimpleName(); // Device Type
-                row[3] = device.getStatus().toString();     // Status
+                row[0] = user.getUsername();
+                row[1] = device.getName();
+                row[2] = device.getClass().getSimpleName();
+                row[3] = device.getStatus().toString();
 
-                // Setting value based on device type
                 if (device instanceof AirConditioner) {
                     row[4] = ((AirConditioner) device).getTemperature();
                 } else if (device instanceof Fan) {
@@ -202,7 +226,7 @@ public class AdminDashboard extends JFrame {
             }
         }
 
-        Object[][] data = new Object[deviceRows.size()][7];
+        Object[][] data = new Object[deviceRows.size()][6];
         for (int i = 0; i < deviceRows.size(); i++) {
             data[i] = deviceRows.get(i);
         }
@@ -218,133 +242,86 @@ public class AdminDashboard extends JFrame {
     }
 
     private void loadDevices() {
-        Object[][] deviceData = getDeviceData(); // Fetch updated device data
-        String[] columnNames = {"Owner", "Device Name", "Device Type", "Status", "Parameter", "User Editable"};
+        try {
+            Object[][] deviceData = getDeviceData();
+            String[] columnNames = {"Owner", "Device Name", "Device Type", "Status", "Parameter", "User Editable"};
 
-        DefaultTableModel tableModel = new DefaultTableModel(deviceData, columnNames) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return column == 3 || column == 4 || column==5; // Allow editing for "Status" and "Parameter"
-            }
-        };
-
-        JTable deviceTable = new JTable(tableModel);
-
-        // Configure the "Status" column (column 3) with a combo box editor
-        TableColumn statusColumn = deviceTable.getColumnModel().getColumn(3);
-        JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"ON", "OFF"});
-        statusColumn.setCellEditor(new DefaultCellEditor(statusComboBox));
-
-        TableColumn statusColumn2 = deviceTable.getColumnModel().getColumn(5);
-        JComboBox<String> statusComboBox2 = new JComboBox<>(new String[]{"Yes", "No"});
-        statusColumn2.setCellEditor(new DefaultCellEditor(statusComboBox2));
-
-        // Add a listener to handle table model changes
-        tableModel.addTableModelListener(e -> {
-            int row = e.getFirstRow();
-            int column = e.getColumn();
-
-            if (column == 3) { // Status column
-                String newStatus = (String) tableModel.getValueAt(row, column);
-
-                // Find the correct device based on the row
-                String deviceName = (String) tableModel.getValueAt(row, 1); // Get the device name from the table
-                User owner = allUsers.stream()
-                        .filter(user -> user.getUsername().equals(tableModel.getValueAt(row, 0))) // Match the owner
-                        .findFirst()
-                        .orElse(null);
-
-                if (owner != null) {
-                    Device device = owner.getDevices().stream()
-                            .filter(d -> d.getName().equals(deviceName)) // Match the device name
-                            .findFirst()
-                            .orElse(null);
-
-                    if (device != null) {
-                        device.setStatus(DeviceStatus.valueOf(newStatus)); // Update the actual device status
-                    }
+            DefaultTableModel tableModel = new DefaultTableModel(deviceData, columnNames) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return column == 3 || column == 4 || column == 5;
                 }
-            } else if (column == 4) { // Parameter column
+            };
+
+            JTable deviceTable = new JTable(tableModel);
+
+            TableColumn statusColumn = deviceTable.getColumnModel().getColumn(3);
+            JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"ON", "OFF"});
+            statusColumn.setCellEditor(new DefaultCellEditor(statusComboBox));
+
+            TableColumn editableColumn = deviceTable.getColumnModel().getColumn(5);
+            JComboBox<String> editableComboBox = new JComboBox<>(new String[]{"Yes", "No"});
+            editableColumn.setCellEditor(new DefaultCellEditor(editableComboBox));
+
+            tableModel.addTableModelListener(e -> {
+                int row = e.getFirstRow();
+                int column = e.getColumn();
                 try {
-                    int newParameter = Integer.parseInt(tableModel.getValueAt(row, column).toString());
+                    String deviceName = (String) tableModel.getValueAt(row, 1);
+                    String ownerName = (String) tableModel.getValueAt(row, 0);
 
-                    // Find the correct device based on the row
-                    String deviceName = (String) tableModel.getValueAt(row, 1); // Get the device name from the table
                     User owner = allUsers.stream()
-                            .filter(user -> user.getUsername().equals(tableModel.getValueAt(row, 0))) // Match the owner
+                            .filter(u -> u.getUsername().equals(ownerName))
                             .findFirst()
-                            .orElse(null);
+                            .orElseThrow(() -> new Exception("User not found"));
 
-                    if (owner != null) {
-                        Device device = owner.getDevices().stream()
-                                .filter(d -> d.getName().equals(deviceName)) // Match the device name
-                                .findFirst()
-                                .orElse(null);
-
-                        if (device != null) {
-                            // Update the parameter based on the device type
-                            if (device instanceof AirConditioner) {
-                                ((AirConditioner) device).adjustSetting(newParameter);
-                            } else if (device instanceof Fan) {
-                                if (newParameter < 1) newParameter = 1; // Minimum speed
-                                if (newParameter > 5) newParameter = 5; // Maximum speed
-                                ((Fan) device).adjustSetting(newParameter);
-                            } else if (device instanceof Light) {
-                                if (newParameter < 0) newParameter = 0; // Minimum brightness
-                                if (newParameter > 100) newParameter = 100; // Maximum brightness
-                                ((Light) device).adjustSetting(newParameter);
-                            }
-
-                            // Update the table with the adjusted value
-                            tableModel.setValueAt(newParameter, row, column);
-                        }
-                    }
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(this, "Invalid parameter value!", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-            else if (column == 5){
-                String newPa = (String) tableModel.getValueAt(row, column);
-
-                // Find the correct device based on the row
-                String deviceName = (String) tableModel.getValueAt(row, 1); // Get the device name from the table
-                User owner = allUsers.stream()
-                        .filter(user -> user.getUsername().equals(tableModel.getValueAt(row, 0))) // Match the owner
-                        .findFirst()
-                        .orElse(null);
-
-                if (owner != null) {
                     Device device = owner.getDevices().stream()
-                            .filter(d -> d.getName().equals(deviceName)) // Match the device name
+                            .filter(d -> d.getName().equals(deviceName))
                             .findFirst()
-                            .orElse(null);
+                            .orElseThrow(() -> new Exception("Device not found"));
 
-                    if (device != null) {
-                        device.setUserEditable(UserEditable.valueOf(newPa)); // Update the actual device status
+                    if (column == 3) {
+                        String newStatus = (String) tableModel.getValueAt(row, column);
+                        device.setStatus(DeviceStatus.valueOf(newStatus));
+                    } else if (column == 4) {
+                        int newParam = Integer.parseInt(tableModel.getValueAt(row, column).toString());
+                        if (device instanceof AirConditioner) {
+                            ((AirConditioner) device).adjustSetting(newParam);
+                        } else if (device instanceof Fan) {
+                            ((Fan) device).adjustSetting(Math.min(Math.max(newParam, 1), 5));
+                        } else if (device instanceof Light) {
+                            ((Light) device).adjustSetting(Math.min(Math.max(newParam, 0), 100));
+                        }
+                        tableModel.setValueAt(newParam, row, column);
+                    } else if (column == 5) {
+                        String editable = (String) tableModel.getValueAt(row, column);
+                        device.setUserEditable(UserEditable.valueOf(editable));
                     }
+
+                } catch (Exception ex) {
+                    showError("Failed to update device: " + ex.getMessage());
                 }
+            });
+
+            if (tableScrollPane != null) {
+                remove(tableScrollPane);
             }
-        });
 
-        // Remove the old table if it exists
-        if (tableScrollPane != null) {
-            remove(tableScrollPane);
+            if (deviceTable.isEditing()) {
+                deviceTable.getCellEditor().stopCellEditing();
+            }
+
+            tableScrollPane = new JScrollPane(deviceTable);
+            add(tableScrollPane, BorderLayout.CENTER);
+
+            revalidate();
+            repaint();
+        } catch (Exception e) {
+            showError("Failed to load devices: " + e.getMessage());
         }
-
-        // Add the new table
-        if (deviceTable.isEditing()) {
-            deviceTable.getCellEditor().stopCellEditing();
-        }
-        
-
-        tableScrollPane = new JScrollPane(deviceTable);
-        add(tableScrollPane, BorderLayout.CENTER);
-
-        
-
-        // Refresh the UI
-        revalidate();
-        repaint();
     }
 
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
 }
