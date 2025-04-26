@@ -15,11 +15,10 @@ public class LoginUI extends JFrame {
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JButton loginButton;
-    private User loggedInUser;
-    private List<Device> devices; // Shared list of devices
+    private List<User> users; // List of users (Admin and RegularUsers)
 
-    public LoginUI(List<Device> devices) {
-        this.devices = devices; // Store the shared devices list
+    public LoginUI(List<User> users) {
+        this.users = users;
 
         setTitle("Login");
         setSize(400, 250);
@@ -27,8 +26,7 @@ public class LoginUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridBagLayout());
+        JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
@@ -66,31 +64,47 @@ public class LoginUI extends JFrame {
 
         add(panel, BorderLayout.CENTER);
 
-        loginButton.addActionListener((ActionEvent e) -> {
-            String username = usernameField.getText();
-            String password = new String(passwordField.getPassword());
-
-            if ("admin".equals(username) && "admin123".equals(password)) {
-                loggedInUser = new Admin(username, password);
-            } else if ("user".equals(username) && "user123".equals(password)) {
-                loggedInUser = new RegularUser(username, password);
-            } else {
-                JOptionPane.showMessageDialog(null, "Invalid credentials", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            dispose();
-            launchDashboard();
-        });
+        loginButton.addActionListener((ActionEvent e) -> performLogin());
     }
 
-    private void launchDashboard() {
-        if (loggedInUser.getRole() == UserRole.ADMIN) {
-            AdminDashboard adminDashboard = new AdminDashboard(devices); // Create AdminDashboard
+    private void performLogin() {
+        String username = usernameField.getText();
+        String password = new String(passwordField.getPassword());
+
+        User loggedInUser = null;
+
+        for (User user : users) {
+            if (user.getUsername().equals(username) && user.checkPassword(password)) {
+                loggedInUser = user;
+                break;
+            }
+        }
+
+        if (loggedInUser != null) {
+            dispose();
+            launchDashboard(loggedInUser);
+        } else {
+            JOptionPane.showMessageDialog(this, "Invalid credentials!", "Login Failed", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void launchDashboard(User user) {
+        if (user instanceof Admin) {
+            AdminDashboard adminDashboard = new AdminDashboard((Admin) user, users);
             adminDashboard.setVisible(true);
         } else {
-            AdminDashboard adminDashboard = new AdminDashboard(devices); // Create AdminDashboard
-            UserDashboard userDashboard = new UserDashboard(devices, adminDashboard); // Pass AdminDashboard to UserDashboard
+            AdminDashboard adminDashboard = new AdminDashboard(getAdminUser(), users);
+            UserDashboard userDashboard = new UserDashboard(user, adminDashboard);
             userDashboard.setVisible(true);
         }
+    }
+
+    private Admin getAdminUser() {
+        for (User user : users) {
+            if (user instanceof Admin) {
+                return (Admin) user;
+            }
+        }
+        return null; // Should not happen if admin user exists
     }
 }
